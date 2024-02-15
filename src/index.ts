@@ -1,5 +1,5 @@
 // import the azle library
-import { $query, $update, Record, StableBTreeMap, Vec, match, Result, nat64, ic, Opt } from 'azle';
+import { $query, $update, Record, StableBTreeMap, Vec, match, Result, nat64, ic, Opt, Variant, text } from 'azle';
 import { v4 as uuidv4 } from 'uuid';
 
 // define the tree record
@@ -38,6 +38,11 @@ type TimberPayload = Record<{
     status: string;
 }>
 
+const Errors = Variant({
+    InvalidInput: text
+});
+type Errors = typeof Errors.tsType;
+
 // create the tree storage
 const treeStorage = new StableBTreeMap<string, Tree>(0, 44, 1024);
 
@@ -52,16 +57,21 @@ export function getTrees(): Result<Vec<Tree>, string> {
 
 // create the getTree query
 $query;
-export function getTree(id: string): Result<Tree, string> {
+export function getTree(id: string): Result<Tree, Errors> {
     return match(treeStorage.get(id), {
-        Some: (tree) => Result.Ok<Tree, string>(tree),
-        None: () => Result.Err<Tree, string>(`a tree with id=${id} not found`)
+        Some: (tree) => Result.Ok(tree),
+        None: () => Result.Err({InvalidInput: `a tree with id=${id} not found`})
     });
 }
 
 // create the addTree update
 $update;
-export function addTree(payload: TreePayload): Result<Tree, string> {
+export function addTree(payload: TreePayload): Result<Tree, Errors> {
+    if(!payload.species ||
+        !payload.diameter ||
+        !payload.length){
+            return Result.Err({InvalidInput: "Input fields cannot be empty."})
+        }
     const tree: Tree = { id: uuidv4(), createdAt: ic.time(), updatedAt: Opt.None, ...payload };
     treeStorage.insert(tree.id, tree);
     return Result.Ok(tree);
@@ -69,23 +79,28 @@ export function addTree(payload: TreePayload): Result<Tree, string> {
 
 // create the updateTree update
 $update;
-export function updateTree(id: string, payload: TreePayload): Result<Tree, string> {
+export function updateTree(id: string, payload: TreePayload): Result<Tree, Errors> {
+    if(!payload.species ||
+        !payload.diameter ||
+        !payload.length){git add
+            return Result.Err({InvalidInput: "Input fields cannot be empty."})
+        }
     return match(treeStorage.get(id), {
         Some: (tree) => {
             const updatedTree: Tree = {...tree, ...payload, updatedAt: Opt.Some(ic.time())};
             treeStorage.insert(tree.id, updatedTree);
-            return Result.Ok<Tree, string>(updatedTree);
+            return Result.Ok(updatedTree);
         },
-        None: () => Result.Err<Tree, string>(`couldn't update a tree with id=${id}. tree not found`)
+        None: () => Result.Err({InvalidInput: `couldn't update a tree with id=${id}. tree not found`})
     });
 }
 
 // create the deleteTree update
 $update;
-export function deleteTree(id: string): Result<Tree, string> {
+export function deleteTree(id: string): Result<Tree, Errors> {
     return match(treeStorage.remove(id), {
-        Some: (deletedTree) => Result.Ok<Tree, string>(deletedTree),
-        None: () => Result.Err<Tree, string>(`couldn't delete a tree with id=${id}. tree not found.`)
+        Some: (deletedTree) => Result.Ok(deletedTree),
+        None: () => Result.Err({InvalidInput: `couldn't delete a tree with id=${id}. tree not found.`})
     });
 }
 
@@ -97,16 +112,22 @@ export function getTimbers(): Result<Vec<Timber>, string> {
 
 // create the getTimber by id query
 $query;
-export function getTimber(id: string): Result<Timber, string> {
+export function getTimber(id: string): Result<Timber, Errors> {
     return match(timberStorage.get(id), {
-        Some: (timber) => Result.Ok<Timber, string>(timber),
-        None: () => Result.Err<Timber, string>(`a timber with id=${id} not found`)
+        Some: (timber) => Result.Ok(timber),
+        None: () => Result.Err({InvalidInput: `a timber with id=${id} not found`})
     });
 }
 
 // create the addTimber update
 $update;
 export function addTimber(payload: TimberPayload): Result<Timber, string> {
+    if(!payload.treeId ||
+        !payload.merchantId ||
+        !payload.price ||
+        !payload.status){
+            return Result.Err({InvalidInput: "Input fields cannot be empty."})
+        }
     const timber: Timber = { id: uuidv4(), createdAt: ic.time(), updatedAt: Opt.None, ...payload };
     timberStorage.insert(timber.id, timber);
     return Result.Ok(timber);
@@ -114,23 +135,29 @@ export function addTimber(payload: TimberPayload): Result<Timber, string> {
 
 // create the updateTimber update
 $update;
-export function updateTimber(id: string, payload: TimberPayload): Result<Timber, string> {
+export function updateTimber(id: string, payload: TimberPayload): Result<Timber, Errors> {
+    if(!payload.treeId ||
+        !payload.merchantId ||
+        !payload.price ||
+        !payload.status){
+            return Result.Err({InvalidInput: "Input fields cannot be empty."})
+        }
     return match(timberStorage.get(id), {
         Some: (timber) => {
             const updatedTimber: Timber = {...timber, ...payload, updatedAt: Opt.Some(ic.time())};
             timberStorage.insert(timber.id, updatedTimber);
-            return Result.Ok<Timber, string>(updatedTimber);
+            return Result.Ok(updatedTimber);
         },
-        None: () => Result.Err<Timber, string>(`couldn't update a timber with id=${id}. timber not found`)
+        None: () => Result.Err({InvalidInput: `couldn't update a timber with id=${id}. timber not found`})
     });
 }
 
 // create the deleteTimber update
 $update;
-export function deleteTimber(id: string): Result<Timber, string> {
+export function deleteTimber(id: string): Result<Timber, Errors> {
     return match(timberStorage.remove(id), {
-        Some: (deletedTimber) => Result.Ok<Timber, string>(deletedTimber),
-        None: () => Result.Err<Timber, string>(`couldn't delete a timber with id=${id}. timber not found.`)
+        Some: (deletedTimber) => Result.Ok(deletedTimber),
+        None: () => Result.Err({InvalidInput: `couldn't delete a timber with id=${id}. timber not found.`})
     });
 }
 
